@@ -60,6 +60,12 @@
           <span class="link-type">待修改</span>
         </template>
       </el-table-column>
+      <el-table-column align="center" label="使用状态">
+        <template slot-scope="{row}">
+          <el-link type="success" :underline="false" v-if="row.enabled === 1">启用</el-link>
+          <el-link type="danger" v-else disabled>禁用</el-link>
+        </template>
+      </el-table-column>
       <el-table-column align="center" class-name="small-padding fixed-width" label="操作" width="230">
         <template slot-scope="{row,$index}">
           <el-tooltip content="操作日志" effect="dark" placement="top">
@@ -78,15 +84,14 @@
       </el-table-column>
     </el-table>
     <!--    分页区域-->
-    <pagination v-show="total>0" :limit.sync="listQuery.size" :page.sync="listQuery.current" :total="total"
-                @pagination="getList"
+    <pagination v-show="total>0" :limit.sync="listQuery.size" :page.sync="listQuery.current" :total="total" @pagination="getList"
     />
     <!--    弹窗区域-->
     <el-dialog :close-on-click-modal="false" :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :model="temp" :rules="rules" label-position="left" label-width="100px" status-icon
                style="width: 550px; margin-left:50px;"
       >
-        <el-form-item label="用户名" prop="username">
+        <el-form-item label="职工号" prop="username">
           <el-input v-model="temp.username" clearable placeholder="请输入内容"/>
         </el-form-item>
         <el-form-item label="分配角色" prop="username">
@@ -95,10 +100,16 @@
             </el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="使用状态：" prop="enabled">
+          <el-select v-model="temp.enabled" placeholder="请选择">
+            <el-option :value="1" label="启用"></el-option>
+            <el-option :value="0" label="禁用"></el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="教师名称" prop="name">
           <el-input v-model="temp.name" clearable placeholder="请输入内容"/>
         </el-form-item>
-        <el-form-item label="教师头像" prop="avatarUrl">
+        <el-form-item label="教师头像">
           <el-upload
             :auto-upload="false"
             :before-upload="beforeAvatarUpload"
@@ -165,19 +176,7 @@ export default {
   name: 'Class',
   components: { Pagination, BackToTop },
   directives: { waves },
-  filters: {
-    statusFilter(status) {
-      const statusMap = {
-        published: 'success',
-        draft: 'info',
-        deleted: 'danger'
-      }
-      return statusMap[status]
-    },
-    typeFilter(type) {
-      return calendarTypeKeyValue[type]
-    }
-  },
+  filters: {},
   data() {
     // 验证手机号的规则
     var checkMobile = (rule, value, cb) => {
@@ -226,7 +225,8 @@ export default {
         name: '',
         idCard: '',
         avatarUrl: '',
-        phone: ''
+        phone: '',
+        enabled: null
       },
       importanceOptions: [1, 2, 3],
       calendarTypeOptions,
@@ -236,7 +236,8 @@ export default {
         name: '',
         idCard: '',
         avatarUrl: '',
-        phone: ''
+        phone: '',
+        enabled: null
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -251,15 +252,16 @@ export default {
         name: [{ required: true, message: '请填写教师名称', trigger: 'change' }],
         idCard: [{ required: true, message: '请填写身份证', trigger: 'change' }, { validator: checkIdcard, trigger: 'blur' }],
         avatarUrl: [{ required: true, message: '请上传头像', trigger: 'change' }],
-        phone: [{ required: true, message: '请填写手机号码', trigger: 'change' }, { validator: checkMobile, trigger: 'blur' }]
+        phone: [{ required: true, message: '请填写手机号码', trigger: 'change' }, { validator: checkMobile, trigger: 'blur' }],
+        enabled: [{ required: true, message: '请填写状态', trigger: 'change' }]
       },
       // 加载动画
       downloadLoading: false
     }
   },
   created() {
-    this.getRolesList()
     this.getList()
+    this.getRolesList()
   },
   methods: {
     // 接口函数获取数据
@@ -289,15 +291,14 @@ export default {
         name: '',
         idCard: '',
         avatarUrl: '',
-        phone: ''
+        phone: '',
+        enabled: ''
       }
     },
-    // 图片上传成功的回调
     handleAvatarSuccess(res, file) {
       this.temp.avatarUrl = res.data
       this.showImgList = res.data
     },
-    // 图片上传失败的回调
     beforeAvatarUpload(file) {
       const isJPG = file.type === 'image/jpeg'
       const isLt2M = file.size / 1024 / 1024 < 2
@@ -344,16 +345,18 @@ export default {
     createData() {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
-          createTeachers(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: '提示',
-              message: '您已成功创建！',
-              type: 'success',
-              duration: 2000
-            })
-            this.getList()
+          createTeachers(this.temp).then((response) => {
+            if (response.status === 200) {
+              this.list.unshift(this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: '提示',
+                message: '您已成功创建！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
         }
       })
@@ -375,19 +378,22 @@ export default {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
           const tempData = Object.assign({}, this.temp)
-          updateTeachers(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.getList()
+          updateTeachers(tempData).then((response) => {
+            if(response.status === 200) {
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              // 提示框
+              this.$notify({
+                title: '提示',
+                message: '您已成功编辑！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
-          // 提示框
-          this.$notify({
-            title: '提示',
-            message: '您已成功编辑！',
-            type: 'success',
-            duration: 2000
-          })
+
         }
       })
     },

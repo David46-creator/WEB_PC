@@ -7,12 +7,19 @@
         clearable
         placeholder="专业名称"
         style="width: 200px;"
-        @keyup.enter.native="handleFilter"
-      />
-      <el-input v-model="listQuery.deptId" class="filter-item" clearable placeholder="所属院系" style="width: 200px;"
-                @keyup.enter.native="handleFilter"
-      />
-      <el-button circle class="filter-item" icon="el-icon-search" size="max" type="primary" @click="handleFilter"/>
+        @keyup.enter.native="handleFilter(listQuery.name)"/>
+      <el-select v-model="listQuery.deptId" class="filter-item" clearable filterable placeholder="所属院系"style="width: 200px;"  @keyup.enter.native="handleFilter(listQuery.deptId)">
+        <el-option v-for="item in deptList" :key="item.id" :label="item.name" :value="item.id">
+        </el-option>
+      </el-select>
+      <el-button-group>
+        <el-tooltip content="搜索" effect="light" placement="top">
+          <el-button v-waves class="filter-item" circle icon="el-icon-search" size="max" type="primary" @click="handleFilter(listQuery.name, listQuery.deptId)"/>
+        </el-tooltip>
+        <el-tooltip content="重置" effect="light" placement="top">
+          <el-button v-waves circle class="filter-item" icon="el-icon-refresh" size="max" @click="resetFilter()"/>
+        </el-tooltip>
+      </el-button-group>
       <el-button class="filter-item" icon="el-icon-edit" style="margin-left: 10px;" @click="handleCreate()">
         添加
       </el-button>
@@ -99,6 +106,7 @@
 <script>
 import { fetchMajorList, createMajor, updateMajor, deleteMajor } from '@/api/major'
 import { fetchDeptList } from '@/api/department'
+import { searchMajors } from '@/api/search'
 import waves from '@/directive/waves' // 波浪指令
 import { parseTime } from '@/utils'
 import BackToTop from '@/components/BackToTop' // 返回顶部
@@ -217,8 +225,22 @@ export default {
       return null
     },
     // 搜索函数
-    handleFilter() {
-      this.listQuery.current = 1
+    handleFilter(major, dept) {
+      searchMajors(major, dept).then(response => {
+        // console.log(response)
+        this.list = response.data.records
+        this.total = response.data.total
+        this.listQuery.current = 1
+      })
+    },
+    // 清空搜索条件
+    resetFilter(){
+      this.listQuery = {
+        current: 0,
+        size: 50,
+        name: '',
+        deptId: ''
+      }
       this.getList()
     },
     // 重置数据
@@ -245,16 +267,18 @@ export default {
     createData() {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
-          createMajor(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: '提示',
-              message: '您已成功创建！',
-              type: 'success',
-              duration: 2000
-            })
-            this.getList()
+          createMajor(this.temp).then((response) => {
+            if (response.status == 200) {
+              this.list.unshift(this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: '提示',
+                message: '您已成功创建！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
         }
       })
@@ -273,18 +297,20 @@ export default {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
           const tempData = Object.assign({}, this.temp)
-          updateMajor(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            // 提示框
-            this.$notify({
-              title: '提示',
-              message: '您已成功编辑！',
-              type: 'success',
-              duration: 2000
-            })
-            this.getList()
+          updateMajor(tempData).then((response) => {
+            if(response.status == 200){
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              // 提示框
+              this.$notify({
+                title: '提示',
+                message: '您已成功编辑！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
         }
       })
@@ -294,9 +320,11 @@ export default {
       try {
         await this.$confirm('确认删除当前数据吗？')
         // 只有点击了确定 才能进入到下方
-        await deleteMajor(id) // 调用删除接口
-        this.getList() // 重新加载数据
-        this.$message.success('删除成功！')
+        await deleteMajor(id).then(response => {
+          // 调用删除接口
+          this.getList() // 重新加载数据
+          this.$message.success('删除成功！')
+        })
       } catch (error) {
         this.$message.error('已取消删除！')
       }

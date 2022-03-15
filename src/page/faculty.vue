@@ -1,12 +1,18 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-input v-model="listQuery.name" class="filter-item" clearable icon="el-icon-search" placeholder="系名称"
-                style="width: 200px;" @keyup.enter.native="handleFilter"
+      <el-input v-model.trim="listQuery.name" class="filter-item" clearable icon="el-icon-search" placeholder="系名称"
+                style="width: 200px;" @keyup.enter.native="handleFilter(listQuery.name)"
       ></el-input>
-      <el-button v-waves circle class="filter-item" icon="el-icon-search" size="max" type="primary"
-                 @click="handleFilter"
-      />
+<!--      搜索区域-->
+      <el-button-group>
+        <el-tooltip content="搜索" effect="light" placement="top">
+          <el-button v-waves class="filter-item" circle icon="el-icon-search" size="max" type="primary" @click="handleFilter(listQuery.name)"/>
+        </el-tooltip>
+        <el-tooltip content="重置" effect="light" placement="top">
+          <el-button v-waves circle class="filter-item" icon="el-icon-refresh" size="max" @click="resetFilter()"/>
+        </el-tooltip>
+      </el-button-group>
       <el-button v-waves class="filter-item" icon="el-icon-edit" style="margin-left: 10px;" @click="handleCreate">
         添加
       </el-button>
@@ -31,7 +37,7 @@
       </el-button>
     </div>
     <el-table :key="tableKey" :data="list" align="center" border fit highlight-current-row style="width: 100%;">
-      <el-table-column :index="indexMethod" align="center" label="序号" type="index" width="65"/>
+      <el-table-column align="center" label="序号" type="index" width="65"/>
       <el-table-column align="center" label="院系名称">
         <template slot-scope="{row}">
           <span>{{ row.name }}</span>
@@ -87,6 +93,7 @@
 
 <script>
 import { fetchDeptList, createDepartment, updateDepartment, deleteDepartment } from '@/api/department'
+import { searchDeptName } from '@/api/search'
 import elDragDialog from '@/directive/el-drag-dialog' // base on element-ui
 import permission from '@/directive/permission/permission'// 权限判断
 import MdInput from '@/components/MDinput'
@@ -128,6 +135,8 @@ export default {
 
   data() {
     return {
+      // 搜索后显示的列表
+      orgList: [],
       number: undefined,
       tableKey: 0,
       list: null,
@@ -169,7 +178,8 @@ export default {
         remarks: [{ required: true, message: '请填写备注', trigger: 'blur' }]
       },
       // 加载动画
-      downloadLoading: false
+      downloadLoading: false,
+      filterMsg: []
     }
   },
   created() {
@@ -179,14 +189,27 @@ export default {
     // 接口函数获取数据
     getList() {
       fetchDeptList(this.listQuery).then(response => {
-        console.log(response)
         this.list = response.data.records
         this.total = response.data.total
       })
     },
-    // 搜索函数
-    handleFilter() {
-      this.listQuery.current = 1
+    // 搜索方法
+    handleFilter(queryString) {
+        searchDeptName(queryString).then(response => {
+          this.list = response.data.records
+          this.total = response.data.total
+          this.listQuery.current = 1
+      })
+    },
+    // 清空搜索条件
+    resetFilter(){
+      this.listQuery = {
+        current: 0,
+        size: 50,
+        number: '',
+        name: '',
+        remarks: ''
+      }
       this.getList()
     },
     // 重置数据
@@ -195,10 +218,6 @@ export default {
         name: '',
         remarks: ''
       }
-    },
-    // 规定序号排序方式
-    indexMethod(index) {
-      return index * 1 + 1
     },
     // 添加函数
     handleCreate() {
@@ -213,16 +232,18 @@ export default {
     createData() {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
-          createDepartment(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: '提示',
-              message: '您已成功创建！',
-              type: 'success',
-              duration: 2000
-            })
-            this.getList()
+          createDepartment(this.temp).then((response) => {
+            if (response.status == 200) {
+              this.list.unshift(this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: '提示',
+                message: '您已成功创建！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
         }
       })
@@ -242,18 +263,20 @@ export default {
       this.$refs['dataForm'].validate(valid => {
         if (valid) {
           const tempData = Object.assign({}, this.temp)
-          updateDepartment(tempData).then(() => {
+          updateDepartment(tempData).then((response) => {
             // const index = this.list.findIndex(v => v.id === this.temp.id)
             // this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            // 提示框
-            this.$notify({
-              title: '提示',
-              message: '您已成功编辑！',
-              type: 'success',
-              duration: 2000
-            })
-            this.getList()
+            if (response.status == 200) {
+              this.dialogFormVisible = false
+              // 提示框
+              this.$notify({
+                title: '提示',
+                message: '您已成功编辑！',
+                type: 'success',
+                duration: 2000
+              })
+              this.getList()
+            }
           })
         }
       })

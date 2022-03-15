@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
-    {{this.$route.params.id}}
-<!--    <h2><span class="link-type">{{ getAdminName(this.$route.params.id) }}</span> 管理的班级</h2>-->
+<!--    {{this.$route.params.id}}-->
+    <h2><span class="link-type">{{ getTeacherName(this.$route.params.id) }}</span> 管理的班级</h2>
     <!--筛选与操作区域-->
     <div class="filter-container">
       <el-input v-model="listQuery.name" class="filter-item" clearable placeholder="班级名称" style="width: 200px;"
@@ -171,6 +171,7 @@ export default {
       // 根据id查询班级具体学生状态
       classInfoList: '',
       teacherList: '',
+      allTeacherList: '',
       listLoading: false,
       // 存储系列表数据
       listQuery: {
@@ -234,6 +235,7 @@ export default {
     this.getMajorList()
     this.getClassInfoList()
     this.getClassInstructorList()
+    this.getTeacherList()
   },
   methods: {
     // 接口函数获取数据
@@ -266,11 +268,11 @@ export default {
         this.teacherList = response.data.data
       })
     },
-    // getTeacherList(){
-    //   fetchTeachersList(this.listQuery).then(response => {
-    //     // this.
-    //   })
-    // },
+    getTeacherList(){
+      fetchTeachersList(this.listQuery).then(response => {
+        this.allTeacherList = response.data.records
+      })
+    },
     // 搜索函数
     handleFilter() {
       this.listQuery.page = 1
@@ -294,6 +296,19 @@ export default {
         let item = this.teacherList[i]
         if (item.classId == id) {
           return item.adminName
+        }
+      }
+      return null
+    },
+    // 通过id查询该班级所管理的教师数据
+    getTeacherName(id) {
+      if (!id) {
+        return null
+      }
+      for (let i = 0, len = this.allTeacherList.length; i < len; i++) {
+        let item = this.allTeacherList[i]
+        if (item.id == id) {
+          return item.name
         }
       }
       return null

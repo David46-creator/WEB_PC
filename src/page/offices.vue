@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
-    {{ this.$route.params.id }}
+<!--    {{ this.$route.params.id }}-->
+    <h4><span class="link-type">{{ getStudentName(this.$route.params.id) }}</span> 的实习履历</h4>
     <div class="filter-container">
     </div>
     <el-tabs :tab-position="tabPosition">

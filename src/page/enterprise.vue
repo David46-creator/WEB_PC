@@ -18,7 +18,7 @@
         导出
       </el-button>
     </div>
-    <el-table :key=" tableKey" ref="scrollBox" v-loading="listLoading" :data="list" border fit highlight-current-row
+    <el-table :key="tableKey" ref="scrollBox" v-loading="listLoading" :data="list" border fit highlight-current-row
               style="width: 100%"
     >
       <el-table-column align="center" label="序号" type="index" width="65"/>
@@ -31,14 +31,14 @@
       <!--          </el-image>-->
       <!--        </template>-->
       <!--      </el-table-column>-->
-      <el-table-column align="center" label="企业名称" prop="name">
+      <el-table-column align="center"  label="企业名称" prop="name">
         <template slot-scope="{row}">
-          <span class="link-type" @click="toRecruitsByEnterpriseName(row.id)">{{ row.name }}</span>
+          <span class="link-type"  @click="toRecruitsByEnterpriseName(row.id)">{{ row.name }}</span>
         </template>
       </el-table-column>
       <el-table-column align="center" label="企业对接老师" prop="name">
         <template slot-scope="{row}">
-          <span class="link-type">{{ getTeacherName(row.adminId) }}</span>
+          <span class="link-type" >{{ getTeacherName(row.adminId) }}</span>
         </template>
       </el-table-column>
       <el-table-column align="center" label="企业联系人" prop="contactName">
@@ -53,7 +53,7 @@
       </el-table-column>
       <el-table-column align="center" label="企业地址" prop="address">
         <template slot-scope="{row}">
-          <span>{{ row.address }}</span>
+          <span >{{ row.address }}</span>
         </template>
       </el-table-column>
       <el-table-column :row="6" :show-overflow-tooltip="true" align="center" label="企业描述" prop="describe">
@@ -83,34 +83,32 @@
     <!-- 查看窗口区域-->
     <el-dialog :close-on-click-modal="false" :visible.sync="dialogSelectFormVisible" fullscreen title="查看">
       <el-form ref="dataForm" :model="temp" label-position="left" label-width="110px" status-icon
-               style="width: 550px; margin-left:50px;"
-      >
+               style="width: 550px; margin-left:50px;">
         <el-form-item label="企业名称：">
-          <el-input v-model="temp.name" :disabled="true"/>
+          <span>{{ temp.name }}</span>
         </el-form-item>
         <el-form-item label="企业对接老师：">
-          <el-input v-model="temp.adminId" :disabled="true"/>
+          <span>{{ getTeacherName(temp.adminId) }}</span>
         </el-form-item>
         <el-form-item label="企业联系人：">
-          <el-input v-model="temp.contactName" :disabled="true"/>
+          <span>{{ temp.contactName }}</span>
         </el-form-item>
         <el-form-item label="联系人电话：">
-          <el-input v-model="temp.phone" :disabled="true"/>
+          <span>{{ temp.phone }}</span>
         </el-form-item>
         <el-form-item label="企业LOGO：">
           <el-image :src="temp.companyLogoUrl" lazy
-                    style="width:150px;height:100px;cursor: zoom-in" @click="showpreviewPic(temp.companyLogoUrl)"
-          >
+                    style="width:150px;height:100px;cursor: zoom-in" @click="showpreviewPic(temp.companyLogoUrl)">
             <div slot="error" class="image-slot">
-              <el-image :src="defaultImage" fit="contain" style="width:150px;height:100px;cursor: zoom-in"/>
+              <el-image :src="defaultImage" fit="cover" style="width:150px;height:100px;cursor: zoom-in"/>
             </div>
           </el-image>
         </el-form-item>
         <el-form-item label="企业地址：">
-          <el-input v-model="temp.address" :disabled="true"/>
+          <span>{{ temp.address }}</span>
         </el-form-item>
         <el-form-item label="企业描述：">
-          <el-input v-model="temp.depict" :disabled="true" autosize type="textarea"/>
+          <span>{{ temp.depict }}</span>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -130,11 +128,10 @@
           <el-input v-model="temp.name" clearable placeholder="请输入内容"/>
         </el-form-item>
         <el-form-item label="企业对接老师" prop="name">
-          <el-select v-model="temp.adminId" filterable placeholder="请选择">
+          <el-select v-model="temp.adminId" filterable placeholder="请选择"  default-first-option>
             <el-option v-for="item in teacherList" :key="item.id" :label="item.name" :value="item.id">
             </el-option>
           </el-select>
-<!--          <el-input v-model="temp.adminId" clearable placeholder="请输入内容"/>-->
         </el-form-item>
         <el-form-item label="企业联系人" prop="contactName">
           <el-input v-model="temp.contactName" clearable placeholder="请输入内容"/>
@@ -450,9 +447,13 @@ export default {
       try {
         await this.$confirm('确认删除当前数据吗？')
         // 只有点击了确定 才能进入到下方
-        await deleteEnterprise(id) // 调用删除接口
-        this.getList() // 重新加载数据
-        this.$message.success('删除成功！')
+        await deleteEnterprise(id).then(response => {
+          if (response.status === 200) {
+            // 调用删除接口
+            this.getList() // 重新加载数据
+            this.$message.success('删除成功！')
+          }
+        })
       } catch (error) {
         this.$message.info('已取消删除！')
       }

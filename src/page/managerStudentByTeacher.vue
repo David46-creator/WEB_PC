@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
+      <h2><span class="link-type">{{ getTeacherName(this.$route.params.id) }}</span> 管理的学生</h2>
       <!-- 头部区域 -->
       <el-input v-model="listQuery.numberId" class="filter-item" clearable placeholder="学号" style="width: 200px;"
                 @keyup.enter.native="handleFilter"
